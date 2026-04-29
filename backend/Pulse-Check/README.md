@@ -87,7 +87,7 @@ This project is designed as a beginner-friendly Django backend that focuses on c
 Clone your forked repository, not the original challenge repository.
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/AmaliTech-DEG-Project-based-challenges.git
+git clone https://github.com/Hugues6221394/AmaliTech-DEG-Project-based-challenges.git
 cd AmaliTech-DEG-Project-based-challenges/backend/Pulse-Check
 ```
 
