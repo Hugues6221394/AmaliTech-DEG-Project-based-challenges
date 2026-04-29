@@ -1,156 +1,348 @@
+Here is a complete `README.md` you can paste directly into `backend/Pulse-Check/README.md`.
+
+````markdown
 # Pulse-Check-API ("Watchdog" Sentinel)
 
-This challenge is designed to test your ability to bridge Computer Science fundamentals with Modern Backend Engineering.
+Pulse-Check-API is a simple backend monitoring system built with Django and Django REST Framework.  
+It acts like a **Dead Man’s Switch** for remote devices: each device must send heartbeats on time, otherwise the system marks it as **down** and triggers an 
+alert.
 
-## 1. Business Context
-
-> **Client:** _CritMon Servers Inc._ (A Critical Infrastructure Monitoring Company).
-
-### The Problem
-
-CritMon provides monitoring for remote solar farms and unmanned weather stations in areas with poor connectivity. These devices are supposed to send "I'm alive" signals every hour.
-
-Currently, CritMon has no way of knowing if a device has gone offline (due to power failure or theft) until a human manually checks the logs. They need a system that alerts _them_ when a device _stops_ talking.
-
-### The Solution
-
-You need to build a **Dead Man’s Switch API**. Devices will register a "monitor" with a countdown timer (e.g., 60 seconds). If the device fails to "ping" (send a heartbeat) to the API before the timer runs out, the system automatically triggers an alert.
+This project was built to demonstrate:
+- backend API design,
+- stateful timer logic,
+- failure detection,
+- pause/snooze behavior,
+- and clean documentation.
 
 ---
 
-## 2. Technical Objective
+## Architecture Diagram
 
-Build a backend service that manages stateful timers.
+```mermaid
+sequenceDiagram
+    participant Device
+    participant API as Pulse-Check API
+    participant DB as Database
 
-- **Registration:** Allow a client to create a monitor with a specific timeout duration.
-- **Heartbeat:** Reset the countdown when a ping is received.
-- **Trigger:** Fire a webhook (or log a critical error) if the countdown reaches zero.
+    Device->>API: POST /monitors (register device)
+    API->>DB: Save monitor (timeout, alert_email, status=up)
 
----
+    Device->>API: POST /monitors/{id}/heartbeat
+    API->>DB: Update last_heartbeat and set status=up
 
-## 3. Getting Started
+    Device->>API: POST /monitors/{id}/pause
+    API->>DB: Set is_paused=true
 
-1.  **Fork this Repository:** Do not clone it directly. Create a fork to your own GitHub account.
-2.  **Environment:** You may use **Node.js, Python, Java or Go, etc.**.
-3.  **Submission:** Your final submission will be a link to your forked repository containing:
-    - The source code.
-    - The **Architecture Diagram**
-    - The `README.md` with documentation.
+    Note over API,DB: System status check happens when /monitors/check-status/ is called
 
----
+    API->>DB: Fetch all monitors
+    API->>API: Compare current time with last_heartbeat
 
-## 4. The Architecture Diagram
-
-**Task:** Before you write any code, you must design the logic flow.
-**Deliverable:** A **Sequence Diagram** or **State Flowchart** embedded in your `README.md`.
-
----
-
-## 5. User Stories & Acceptance Criteria
-
-### User Story 1: Registering a Monitor
-
-**As a** device administrator,
-**I want to** create a new monitor for my device,
-**So that** the system knows to track its status.
-
-**Acceptance Criteria:**
-
-- [ ] The API accepts a `POST /monitors` request.
-- [ ] Input: `{"id": "device-123", "timeout": 60, "alert_email": "admin@critmon.com"}`.
-- [ ] The system starts a countdown timer for 60 seconds associated with `device-123`.
-- [ ] Response: `201 Created` with a confirmation message.
-
-### User Story 2: The Heartbeat (Reset)
-
-**As a** remote device,
-**I want to** send a signal to the server,
-**So that** my timer is reset and no alert is sent.
-
-**Acceptance Criteria:**
-
-- [ ] The API accepts a `POST /monitors/{id}/heartbeat` request.
-- [ ] If the ID exists and the timer has NOT expired:
-  - [ ] Restart the countdown from the beginning (e.g., reset to 60 seconds).
-  - [ ] Return `200 OK`.
-- [ ] If the ID does not exist:
-  - [ ] Return `404 Not Found`.
-
-### User Story 3: The Alert (Failure State)
-
-**As a** support engineer,
-**I want to** be notified immediately if a device stops sending heartbeats,
-**So that** I can deploy a repair team.
-
-**Acceptance Criteria:**
-
-- [ ] If the timer for `device-123` reaches 0 seconds (no heartbeat received):
-  - [ ] The system must internally "fire" an alert.
-  - [ ] **Implementation:** For this project, simply `console.log` a JSON object: `{"ALERT": "Device device-123 is down!", "time": <timestamp>}`. (Or simulate sending an email).
-  - [ ] The monitor status changes to `down`.
+    alt Timeout exceeded and monitor not paused
+        API->>DB: Update status=down
+        API->>API: Console log alert JSON
+    else Monitor is healthy or paused
+        API->>DB: Keep status unchanged
+    end
+````
 
 ---
 
-## 6. Bonus User Story (The "Snooze" Button)
+## Overview
 
-**As a** maintenance technician,
-**I want to** pause monitoring while I am repairing a device,
-**So that** I don't trigger false alarms.
+Devices are registered with a timeout value.
+When a device sends a heartbeat, the system updates the last heartbeat time and keeps the monitor active.
 
-**Acceptance Criteria:**
+If too much time passes without a heartbeat, the system:
 
-- [ ] Create a `POST /monitors/{id}/pause` endpoint.
-- [ ] When called, the timer stops completely. No alerts will fire.
-- [ ] Calling the heartbeat endpoint again automatically "un-pauses" the monitor and restarts the timer.
+* marks the device as `down`,
+* and prints an alert in the console.
 
----
-
-## 7. The "Developer's Choice" Challenge
-
-We value engineers who look for "what's missing."
-
-**Task:** Identify **one** additional feature that makes this system more robust or user-friendly.
-
-1.  **Implement it.**
-2.  **Document it:** Explain _why_ you added it in your README.
+This project is designed as a beginner-friendly Django backend that focuses on clear logic and clean state handling.
 
 ---
 
-## 8. Documentation Requirements
+## Features
 
-Your final `README.md` must replace these instructions. It must cover:
-
-1.  **Architecture Diagram**
-2.  **Setup Instructions**
-3.  **API Documentation**
-4.  **The Developer's Choice:** Explanation of your added feature.
-
----
-
-Submit your repo link via the [online](https://forms.cloud.microsoft/e/bLyGT3byxx) form.
-
-## 🛑 Pre-Submission Checklist
-
-**WARNING:** Before you submit your solution, you **MUST** pass every item on this list.
-If you miss any of these critical steps, your submission will be **automatically rejected** and you will **NOT** be invited to an interview.
-
-### 1. 📂 Repository & Code
-
-- [ ] **Public Access:** Is your GitHub repository set to **Public**? (We cannot review private repos).
-- [ ] **Clean Code:** Did you remove unnecessary files (like `node_modules`, `.env` with real keys, or `.DS_Store`)?
-- [ ] **Run Check:** if we clone your repo and run `npm start` (or equivalent), does the server start immediately without crashing?
-
-### 2. 📄 Documentation (Crucial)
-
-- [ ] **Architecture Diagram:** Did you include a visual Diagram (Flowchart or Sequence Diagram) in the README?
-- [ ] **README Swap:** Did you **DELETE** the original instructions (the problem brief) from this file and replace it with your own documentation?
-- [ ] **API Docs:** Is there a clear list of Endpoints and Example Requests in the README?
-
-### 3. 🧹 Git Hygiene
-
-- [ ] **Commit History:** Does your repo have multiple commits with meaningful messages? (A single "Initial Commit" is a red flag).
+* Register a new monitor
+* Receive heartbeats
+* Detect timeout failures
+* Mark devices as `down`
+* Pause monitoring to prevent false alerts
+* List all monitors for observability
+* Console-based alert logging for failure simulation
 
 ---
 
-**Ready?**
-If you checked all the boxes above, submit your repository link in the application form. Good luck! 🚀
+## Tech Stack
+
+* Python
+* Django
+* Django REST Framework
+* SQLite
+
+---
+
+## Setup Instructions
+
+### 1. Clone the repository
+
+Clone your forked repository, not the original challenge repository.
+
+```bash
+git clone https://github.com/YOUR_USERNAME/AmaliTech-DEG-Project-based-challenges.git
+cd AmaliTech-DEG-Project-based-challenges/backend/Pulse-Check
+```
+
+### 2. Create and activate a virtual environment
+
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+On Windows:
+
+```bash
+venv\Scripts\activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install django djangorestframework
+```
+
+### 4. Run migrations
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### 5. Start the development server
+
+```bash
+python manage.py runserver
+```
+
+The server should run at:
+
+```text
+http://127.0.0.1:8000/
+```
+
+---
+
+## API Documentation
+
+### 1. Register a monitor
+
+**Endpoint:**
+`POST /monitors/`
+
+**Purpose:**
+Creates a new monitor for a device.
+
+**Request Body Example:**
+
+```json
+{
+  "device_id": "device-123",
+  "timeout": 60,
+  "alert_email": "admin@critmon.com"
+}
+```
+
+**Response:**
+
+* `201 Created` when the monitor is created successfully
+
+---
+
+### 2. List all monitors
+
+**Endpoint:**
+`GET /monitors/`
+
+**Purpose:**
+Returns all registered monitors.
+This was added as the developer’s choice feature to improve observability.
+
+**Response:**
+
+* `200 OK`
+
+**Example Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "device_id": "device-123",
+    "timeout": 60,
+    "alert_email": "admin@critmon.com",
+    "status": "up",
+    "last_heartbeat": "2026-04-29T16:00:00Z",
+    "is_paused": false,
+    "created_at": "2026-04-29T15:59:00Z",
+    "updated_at": "2026-04-29T16:00:00Z"
+  }
+]
+```
+
+---
+
+### 3. Send heartbeat
+
+**Endpoint:**
+`POST /monitors/{device_id}/heartbeat/`
+
+**Purpose:**
+Resets the countdown timer and marks the monitor as active.
+
+**Example:**
+`POST /monitors/device-123/heartbeat/`
+
+**Behavior:**
+
+* updates `last_heartbeat`
+* sets `status = "up"`
+* automatically unpauses the monitor if it was paused
+
+**Response:**
+
+* `200 OK` if the monitor exists
+* `404 Not Found` if the monitor does not exist
+
+---
+
+### 4. Pause monitoring
+
+**Endpoint:**
+`POST /monitors/{device_id}/pause/`
+
+**Purpose:**
+Temporarily pauses monitoring for a device.
+
+**Example:**
+`POST /monitors/device-123/pause/`
+
+**Behavior:**
+
+* sets `is_paused = true`
+* pauses failure detection for that device
+
+**Response:**
+
+* `200 OK` if the monitor exists
+* `404 Not Found` if the monitor does not exist
+
+---
+
+### 5. Check system status
+
+**Endpoint:**
+`GET /monitors/check-status/`
+
+**Purpose:**
+Checks all monitors and determines whether any device has timed out.
+
+**Behavior:**
+
+* compares current time with `last_heartbeat`
+* ignores paused monitors
+* marks overdue monitors as `down`
+* prints an alert to the console in JSON format
+
+**Alert Example:**
+
+```json
+{
+  "ALERT": "Device device-123 is down!",
+  "time": "2026-04-29T16:05:00Z"
+}
+```
+
+**Response:**
+
+* `200 OK`
+
+---
+
+## Design Decisions
+
+### 1. Why Django and DRF?
+
+Django gives a clean structure for backend development, while Django REST Framework makes it easy to build JSON APIs.
+
+### 2. Why store monitor state in the database?
+
+This makes the application state persistent and easy to inspect.
+The app can track:
+
+* timeout,
+* last heartbeat,
+* pause status,
+* and device status.
+
+### 3. Why use a manual `/check-status/` endpoint?
+
+This keeps the project simple and beginner-friendly.
+In a production system, this kind of logic would usually run in a background worker or scheduled job.
+
+### 4. Why console logging for alerts?
+
+The challenge allows alert simulation through console logging.
+This keeps the implementation simple while still showing the correct system behavior.
+
+---
+
+## Developer’s Choice Feature
+
+### Monitor Listing Endpoint
+
+I added `GET /monitors/` to improve observability.
+
+This helps administrators:
+
+* see all registered devices,
+* check which devices are `up` or `down`,
+* inspect `last_heartbeat`,
+* and review whether a device is paused.
+
+This feature was added because real monitoring systems need visibility, not only alerting.
+Being able to inspect the current state of all devices makes the system more useful and easier to debug.
+
+---
+
+## Example Usage Flow
+
+1. Register a monitor with `POST /monitors/`
+2. Send heartbeats with `POST /monitors/{device_id}/heartbeat/`
+3. Pause a monitor with `POST /monitors/{device_id}/pause/`
+4. Run the system check with `GET /monitors/check-status/`
+5. View all monitors with `GET /monitors/`
+
+---
+
+## Future Improvements
+
+* Automatic background scheduler for timeout checks
+* Email or webhook alerts instead of console logs
+* Authentication and authorization
+* Admin dashboard for monitor visibility
+* Better concurrency handling for large-scale deployments
+
+---
+
+## Conclusion
+
+Pulse-Check-API demonstrates how a backend system can manage stateful timers, detect failures, and provide real-time monitoring behavior using Django.
+
+It was built to be simple, readable, and strong enough to show practical backend engineering thinking.
+
+---
+
+```
+
