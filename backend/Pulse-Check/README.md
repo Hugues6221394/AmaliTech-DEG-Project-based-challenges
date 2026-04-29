@@ -1,6 +1,3 @@
-Here is a complete `README.md` you can paste directly into `backend/Pulse-Check/README.md`.
-
-````markdown
 # Pulse-Check-API ("Watchdog" Sentinel)
 
 Pulse-Check-API is a simple backend monitoring system built with Django and Django REST Framework.  
@@ -344,5 +341,4 @@ It was built to be simple, readable, and strong enough to show practical backend
 
 ---
 
-```
 
